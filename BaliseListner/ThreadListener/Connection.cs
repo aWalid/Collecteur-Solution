@@ -495,7 +495,8 @@ namespace BaliseListner.ThreadListener
             {
                 //LoggingCommunication("Connection", $"CC: E:\t{RemoteHote}\t{boitier.Matricule}\t{boitier.Matricule}.\r\n{e.Message}"); //Exception
             }
-            OLDModelGeneratorProcessor.addDeconnect(boitier);
+            if (boitier != null)
+                OLDModelGeneratorProcessor.addDeconnect(boitier);
         }
         //////////private void SendCallback(IAsyncResult result)
         //////////{
