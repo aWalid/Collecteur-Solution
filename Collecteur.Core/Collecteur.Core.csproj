@@ -50,7 +50,6 @@
     <Compile Include="Api\Trajet.cs" />
     <Compile Include="Api\Trame.cs" />
     <Compile Include="Api\TrameSonde.cs" />
-    <Compile Include="Api\TrameEco.cs" />
     <Compile Include="Api\TrameReal.cs" />
     <Compile Include="Events\SyncEvents.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

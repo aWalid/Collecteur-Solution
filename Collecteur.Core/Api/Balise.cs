@@ -15,15 +15,7 @@ namespace Collecteur.Core.Api
     public class Balise : Serialise
     {
         private int matricule;
-        private bool ecoconduite;
         public BaliseInfo baliseInfo { get; set; }
-
-        public bool EcoConduite
-        {
-            get { return ecoconduite; }
-            set { ecoconduite = value; }
-        }
-         
         public int Matricule
         {
             get { return matricule; }

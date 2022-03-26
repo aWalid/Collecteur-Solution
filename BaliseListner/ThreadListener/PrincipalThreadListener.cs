@@ -32,14 +32,13 @@ namespace BaliseListner.ThreadListener
         private static int sleepTime = 300000;
         private static SyncEvents syncBase;
         private static PrincipalListner principalListner;
-        private static int NumeroJour = DateTime.Now.Day;/*Ali*/
         public static void StartCollecteur()
         {
             try
             {
 
                 initialisation();
-                logger.Info(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Starting Principal Listener ...");
+                logger.Info(DateTime.Now.ToString("HH:mm:ss") + " Starting Principal Listener ...");
                 principalListner = PrincipalListner.getPrincipalListner(config);
                 principalListner.Start();
                 syncBase = PrincipalListner.SyncBase;
@@ -51,14 +50,9 @@ namespace BaliseListner.ThreadListener
                     {
                         principalListner.RefreshData();
 
-                        if (NumeroJour != DateTime.Now.Day)
-                        {
-                            /* Mise à jour le variable écoconduites a mois une fois minuit après la premiers synchronisation de liste balise */
-                            principalListner.RefreshDataEchoConduit();
-                            NumeroJour = DateTime.Now.Day;
-                        }
+                         
 
-                        Console.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Refresh All balises finished.");
+                        Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " Refresh All balises finished.");
                         sleepTime = 300000;
                         if (!PrincipalListner.baseActive)
                             syncBase.NewItemEvent.Set();
@@ -239,7 +233,7 @@ namespace BaliseListner.ThreadListener
 
         }
 
-        public   void SetQuitRequested()
+        public void SetQuitRequested()
         {
             lock (_syncLock)
             {
@@ -250,13 +244,7 @@ namespace BaliseListner.ThreadListener
         {
             boitiers = new Dictionary<int, Balise>();
             Version = DataBase.GetBalise(false, 0, ref boitiers);
-
-            DataBase.UpdateBaliseEcoConduite(ref boitiers, ref connections);
-
-            //Balise b = new Balise(999999, "868441036804224");
-            //b.EchoConduite = true;
-            //boitiers.Add(b.Matricule, b);
-
+            // A supprimer
             foreach (Balise balise in boitiers.Values)
             {
                 Trajet trajet;
@@ -269,7 +257,7 @@ namespace BaliseListner.ThreadListener
                     if (trajet != null)
                     {
                         balise.TrajeEnCours = new Trajet(trajet);
-                        Console.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Chargement du Trajet pour la Balise: {0} distance: {1}.", balise.Nisbalise, trajet.Distance);
+                        Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " Chargement du Trajet pour la Balise: {0} distance: {1}.", balise.Nisbalise, trajet.Distance);
                         logger.Info("Chargement du Trajet pour la Balise : " + balise.Nisbalise + " distance : " + trajet.Distance);
                         File.Delete(Path.Combine(Environment.CurrentDirectory, path));
                     }
@@ -291,20 +279,17 @@ namespace BaliseListner.ThreadListener
 
         }
 
-        public void RefreshDataEchoConduit()
-        {
-            DataBase.UpdateBaliseEcoConduite(ref boitiers, ref connections);
-        }
+
 
         public void Start()
         {
 
-            Console.Write(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Démarrage du Collecteur... ");
+            Console.Write(DateTime.Now.ToString("HH:mm:ss") + " Démarrage du Collecteur... ");
             SetupServerSocket();
 
             serverSocket.BeginAcceptTcpClient(new AsyncCallback(AcceptCallback), serverSocket);
             logger.Debug("Socket server demarre avec succe : ");
-            Console.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " OK. en Ecoute.");
+            Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " OK. en Ecoute.");
 
 
         }

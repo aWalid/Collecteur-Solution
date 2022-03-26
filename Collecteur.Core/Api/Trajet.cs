@@ -186,64 +186,6 @@ namespace Collecteur.Core.Api
             return false;
         }
 
-
-        public bool UpdateTrajetMidNightSplitTrajet(TrameReal trame, ref TrameReal added)
-        {
-            if ((trame.Temps - oldTrame.Temps).TotalMinutes <= 0)
-                return false;
-
-            if (trame.Temps.Day != oldTrame.Temps.Day)
-            {
-                // log à supprimer
-                Logging("fin trajet mid night(ecoConduit)");
-                return true;
-            }
-
-            if ((trame.Temps - oldTrame.Temps).TotalMinutes >= 5)
-            {
-                // log à supprimer
-                Logging("fin trajet");
-                return true;
-            }
-
-
-
-            double distancetemp = EarthDistanceCalc((double)oldTrame.Latitude, (double)oldTrame.Longitude, (double)trame.Latitude, (double)trame.Longitude);
-            if (distancetemp < 10 && trame.Vitesse < 10)
-            {
-                if (duree == 0)
-                {
-                    dateDebut = trame.Temps;
-                }
-                return false;
-            }
-
-            distance += distancetemp;
-            Vmax = trame.Vitesse > Vmax ? trame.Vitesse : Vmax;
-
-            latitudeFin = trame.Latitude;
-            longitudeFin = trame.Longitude;
-            // Log à supprimer
-            Logging("update Trajet distance ajouté : " + distancetemp);
-            if (duree == 0 && (trame.Temps - oldTrame.Temps).TotalMinutes >= 2)
-            {
-                added = new TrameReal(oldTrame);
-                added.Temps = trame.Temps.AddMinutes(-1);
-                added.TempsReception = new DateTime(1970, 1, 1, 0, 0, 0);
-                dateDebut = added.Temps;
-                duree = 60;
-            }
-            else
-            {
-                duree = (int)(trame.Temps - dateDebut).TotalSeconds;
-            }
-
-            oldTrame = trame;
-
-            return false;
-        }
-
-
         public object Clone()
         {
             return this.MemberwiseClone();

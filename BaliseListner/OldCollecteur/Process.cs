@@ -493,8 +493,6 @@ namespace OldCollecteur
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
 
-                // Logging(trames, boitier.Nisbalise);
-
                 foreach (String oneTrame in listTrame)
                 {
                     String[] data = oneTrame.Split(',');
@@ -551,6 +549,7 @@ namespace OldCollecteur
                     }
                 }
             }
+            // Atrack  Sarens
             else if (trames.Contains("@S,"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -586,6 +585,7 @@ namespace OldCollecteur
 
                 }
             }
+            // Atrack Ulterson
             else if (trames.Contains("@U,"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -623,7 +623,7 @@ namespace OldCollecteur
 
                 }
             }
-
+            // Atrack 
             else if (trames.Contains("@P,"))
             {
 
@@ -662,6 +662,7 @@ namespace OldCollecteur
 
                 }
             }
+            // Atrack avec canbus et trialer (BL, Condor)
             else if (trames.Contains("@F,"))
             {
                 const string pattern = @"[^(\u0000-\u0009)\u001A(\u0020-\u007F)]+";
@@ -700,6 +701,7 @@ namespace OldCollecteur
 
                 }
             }
+            // Atrack Etusa
             else if (trames.Contains("@E,"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -776,6 +778,84 @@ namespace OldCollecteur
 
                 }
             }
+            // Sonde de température "chambre de froid" example de client numilog, la vergule de temperateur est important
+            else if (trames.Contains("@T,"))
+            {
+                String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (String oneTrame in listTrame)
+                {
+                    if (oneTrame.Length == 0)
+                        continue;
+                    String[] data = oneTrame.Split(',');
+
+                    if (data[0].Substring(data[0].Length - 2) != "@T")
+                    {
+                        String[] dataTrame = (String[])data.Clone();
+                        data = new string[dataTrame.Length + 5];
+                        dataTrame.CopyTo(data, 5);
+                    }
+
+                    if (data.Length < 20)
+                    {
+
+                        //  Console.WriteLine("Trame non Valide {0}", oneTrame);
+                        LogDBError("Trame  Non Valide, Trame : " + trame, boitier.Nisbalise);
+                        // this.Socket.Send(Encoding.ASCII.GetBytes(OK), OK.Length, SocketFlags.None);
+                    }
+                    else
+                        try
+                        {
+                            spliteTrameSondeTemperature(data, boitier, ref tramereal, receptionDateTime);
+                        }
+                        catch (Exception)
+                        {
+                            LogDBError("Trame  Non Valide, Trame : " + oneTrame, boitier.Nisbalise);
+                            Console.WriteLine("Trame non Valide {0}", oneTrame);
+                        }
+
+                }
+            }
+            // Sonde niveuacarburant
+            else if (trames.Contains("@L,"))
+            {
+                String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (String oneTrame in listTrame)
+                {
+                    if (oneTrame.Length == 0)
+                        continue;
+                    String[] data = oneTrame.Split(',');
+
+                    if (data[0].Substring(data[0].Length - 2) != "@L")
+                    {
+                        String[] dataTrame = (String[])data.Clone();
+                        data = new string[dataTrame.Length + 5];
+                        dataTrame.CopyTo(data, 5);
+                    }
+
+                    if (data.Length < 20)
+                    {
+
+                        //  Console.WriteLine("Trame non Valide {0}", oneTrame);
+                        LogDBError("Trame  Non Valide, Trame : " + trame, boitier.Nisbalise);
+                        // this.Socket.Send(Encoding.ASCII.GetBytes(OK), OK.Length, SocketFlags.None);
+                    }
+                    else
+                        try
+                        {
+
+                            spliteTrameSondeNiveauCarbrant(data, boitier, ref tramereal, receptionDateTime);
+                        }
+                        catch (Exception)
+                        {
+                            LogDBError("Trame  Non Valide, Trame : " + oneTrame, boitier.Nisbalise);
+                            Console.WriteLine("Trame non Valide {0}", oneTrame);
+                        }
+
+                }
+            }
+            //Concox 
             else if (trames.StartsWith("7878") || trames.StartsWith("7979"))
             {
                 Byte[] sendBuffer;
@@ -800,7 +880,36 @@ namespace OldCollecteur
                     }
                 }
             }
-            ///<Commented by ali le >
+            //          Concox avec Cryptage
+            else if (trames.StartsWith("8080"))
+            {
+                Byte[] Reponse, ReponseCrypted;
+
+                Reponse = spliteTrameConcox(trames, boitier, ref tramereal, receptionDateTime);
+
+
+
+                string typeTrame = trames.Substring(6, 2);
+
+                if (typeTrame.Equals("01", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("13", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("23", StringComparison.OrdinalIgnoreCase)
+                    || typeTrame.Equals("26", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("8A", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("16", StringComparison.OrdinalIgnoreCase))
+                {
+
+                    ReponseCrypted = Cryptage.CrypteConcoxReponseMsg(Reponse, Cryptage.getKey(boitier.Nisbalise));
+
+                    Reponse[0] = 0x78;
+                    Reponse[1] = 0x78;
+
+                    Connection.Logging("Envoie\t\t: " + BitConverter.ToString(ReponseCrypted).Replace("-", ""), boitier.Nisbalise + "-ReponseServer");
+                    Connection.Logging("Decryptage\t: " + BitConverter.ToString(Reponse).Replace("-", ""), boitier.Nisbalise + "-ReponseServer");
+
+
+                    socket.Send(ReponseCrypted, ReponseCrypted.Length, SocketFlags.None);
+                }
+
+            }
+            //          Concox trame 7979 
+            ///<Commented by ali, 7979  >
             ///else if (trames.StartsWith("7979"))
             ///{
             ///    Byte[] sendBuffer;
@@ -845,189 +954,7 @@ namespace OldCollecteur
             ///    }
             ///} 
             ///</Commented by ali le >
-
-            else if (trames.Contains("@e,"))
-            {
-                String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (String oneTrame in listTrame)
-                {
-                    if (oneTrame.Length == 0)
-                        continue;
-                    String[] data = oneTrame.Split(',');
-
-                    if (data[0].Substring(data[0].Length - 2) != "@e")
-                    {
-                        String[] dataTrame = (String[])data.Clone();
-                        data = new string[dataTrame.Length + 5];
-                        dataTrame.CopyTo(data, 5);
-                    }
-
-                    if (data.Length < 20)
-                    {
-
-                        //  Console.WriteLine("Trame non Valide {0}", oneTrame);
-                        LogDBError("Trame  Non Valide, Trame : " + trame, boitier.Nisbalise);
-                        // this.Socket.Send(Encoding.ASCII.GetBytes(OK), OK.Length, SocketFlags.None);
-                    }
-                    else
-                        try
-                        {
-                            spliteTrameEchoATrack(data, boitier, ref tramereal, receptionDateTime);
-                        }
-                        catch (Exception ex)
-                        {
-
-                            LogDBError("Trame  Non Valide, Trame : " + oneTrame, boitier.Nisbalise);
-                            LogDBError("\n Exception : " + ex.ToString(), boitier.Nisbalise);
-                            Console.WriteLine("Trame non Valide {0}", oneTrame);
-                        }
-
-                }
-            }
-            else if (trames.Contains("@T,"))// Sonde de température "chambre de froid" example de client numilog,la vergule de temperateur est important
-            {
-                String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (String oneTrame in listTrame)
-                {
-                    if (oneTrame.Length == 0)
-                        continue;
-                    String[] data = oneTrame.Split(',');
-
-                    if (data[0].Substring(data[0].Length - 2) != "@T")
-                    {
-                        String[] dataTrame = (String[])data.Clone();
-                        data = new string[dataTrame.Length + 5];
-                        dataTrame.CopyTo(data, 5);
-                    }
-
-                    if (data.Length < 20)
-                    {
-
-                        //  Console.WriteLine("Trame non Valide {0}", oneTrame);
-                        LogDBError("Trame  Non Valide, Trame : " + trame, boitier.Nisbalise);
-                        // this.Socket.Send(Encoding.ASCII.GetBytes(OK), OK.Length, SocketFlags.None);
-                    }
-                    else
-                        try
-                        {
-                            spliteTrameSondeTemperature(data, boitier, ref tramereal, receptionDateTime);
-                        }
-                        catch (Exception)
-                        {
-                            LogDBError("Trame  Non Valide, Trame : " + oneTrame, boitier.Nisbalise);
-                            Console.WriteLine("Trame non Valide {0}", oneTrame);
-                        }
-
-                }
-            }
-            else if (trames.Contains("@L,"))// Sonde niveuacarburant
-            {
-                String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (String oneTrame in listTrame)
-                {
-                    if (oneTrame.Length == 0)
-                        continue;
-                    String[] data = oneTrame.Split(',');
-
-                    if (data[0].Substring(data[0].Length - 2) != "@L")
-                    {
-                        String[] dataTrame = (String[])data.Clone();
-                        data = new string[dataTrame.Length + 5];
-                        dataTrame.CopyTo(data, 5);
-                    }
-
-                    if (data.Length < 20)
-                    {
-
-                        //  Console.WriteLine("Trame non Valide {0}", oneTrame);
-                        LogDBError("Trame  Non Valide, Trame : " + trame, boitier.Nisbalise);
-                        // this.Socket.Send(Encoding.ASCII.GetBytes(OK), OK.Length, SocketFlags.None);
-                    }
-                    else
-                        try
-                        {
-
-                            spliteTrameSondeNiveauCarbrant(data, boitier, ref tramereal, receptionDateTime);
-                        }
-                        catch (Exception)
-                        {
-                            LogDBError("Trame  Non Valide, Trame : " + oneTrame, boitier.Nisbalise);
-                            Console.WriteLine("Trame non Valide {0}", oneTrame);
-                        }
-
-                }
-            }
-            else if (trames.Contains("@C,"))
-            {
-                const string pattern = @"[^(\u0000-\u0009)\u001A(\u0020-\u007F)]+";
-                Regex rgx = new Regex(pattern);
-                String[] listTrame = rgx.Split(trames);
-                //String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (String oneTrame in listTrame)
-                {
-                    if (oneTrame.Length == 0)
-                        continue;
-                    String[] data = oneTrame.Split(',');
-
-                    if (data[0].Substring(data[0].Length - 2) != "@C")
-                    {
-                        String[] dataTrame = (String[])data.Clone();
-                        data = new string[dataTrame.Length + 5];
-                        dataTrame.CopyTo(data, 5);
-                    }
-
-
-                    if (data.Length < 20)
-                    {
-
-                        //  Console.WriteLine("Trame non Valide {0}", oneTrame);
-                        LogDBError("Trame  Non Valide, Trame : " + trame, boitier.Nisbalise);
-                        // this.Socket.Send(Encoding.ASCII.GetBytes(OK), OK.Length, SocketFlags.None);
-                    }
-                    else try
-                        {
-                            spliteTrameATrackCANEco(data, boitier, ref tramereal, receptionDateTime);
-                        }
-                        catch (Exception)
-                        {
-                            LogDBError("Trame  Non Valide, Trame : " + oneTrame, boitier.Nisbalise);
-                            Console.WriteLine("Trame non Valide {0}", oneTrame);
-                        }
-
-                }
-            }
-            else if (trames.StartsWith("8080"))
-            {
-                Byte[] Reponse, ReponseCrypted;
-
-                Reponse = spliteTrameConcox(trames, boitier, ref tramereal, receptionDateTime);
-
-
-
-                string typeTrame = trames.Substring(6, 2);
-
-                if (typeTrame.Equals("01", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("13", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("23", StringComparison.OrdinalIgnoreCase)
-                    || typeTrame.Equals("26", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("8A", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("16", StringComparison.OrdinalIgnoreCase))
-                {
-
-                    ReponseCrypted = Cryptage.CrypteConcoxReponseMsg(Reponse, Cryptage.getKey(boitier.Nisbalise));
-
-                    Reponse[0] = 0x78;
-                    Reponse[1] = 0x78;
-
-                    Connection.Logging("Envoie\t\t: " + BitConverter.ToString(ReponseCrypted).Replace("-", ""), boitier.Nisbalise + "-ReponseServer");
-                    Connection.Logging("Decryptage\t: " + BitConverter.ToString(Reponse).Replace("-", ""), boitier.Nisbalise + "-ReponseServer");
-
-
-                    socket.Send(ReponseCrypted, ReponseCrypted.Length, SocketFlags.None);
-                }
-
-            }
-            ///Teltonika
+            //          Teltonika
             else if (trames.StartsWith("00000000"))
             {
                 try
@@ -1062,7 +989,8 @@ namespace OldCollecteur
                 }
 
             }
-            else //if (!trames.Contains("$"))
+            // if (!trames.Contains("$"))
+            else
             {
                 //  Console.WriteLine("Trame non reconnu");
                 // Logging(trames, boitier.Nisbalise);
@@ -1322,51 +1250,10 @@ namespace OldCollecteur
                                 tramereal = tr;
 
 
-                                if (boitier.EcoConduite)
-                                {
-                                    // do something
-                                    TrameEco echo = new TrameEco(tr.Temps.AddHours(1), tr.Direction, (int)Math.Truncate(tr.Vitesse), boitier.Nisbalise, (byte)(trame.DataLocationTrame.Ignition > 0 ? 1 : 0), -1, -1, null, null, null, null);
-                                    OLDModelGeneratorProcessor.addEcoTrame(echo);
 
-                                    //if (trame.Type == ConcoxTrameType.WeTrackDataAlarm)
-                                    //{
-                                    //    Connection.Logging("" + trame.DataLocationTrame.Alerm.ToString(), boitier.Nisbalise);
-                                    //}
-
-                                }
                             }
                     }
                 }
-            }
-            else if ((trame.Type == ConcoxTrameType.Status) && (boitier.EcoConduite))
-            {
-                if (tramereal != null)
-                {
-                    string Voltage_Level = p.Substring(10, 2);
-                    int Voltag = 0;
-
-                    if (Voltage_Level == "06")
-                        Voltag = 41;
-                    else if (Voltage_Level == "05")
-                        Voltag = 39;
-                    else if (Voltage_Level == "04")
-                        Voltag = 38;
-                    else if (Voltage_Level == "03")
-                        Voltag = 37;
-                    else if (Voltage_Level == "02")
-                        Voltag = 36;
-                    else if (Voltage_Level == "01")
-                        Voltag = 35;
-                    else if (Voltage_Level == "00")
-                        Voltag = 33;
-
-                    TrameReal r = new TrameReal(tramereal);
-                    OptionsAux ops = new OptionsAux();
-                    ops[72] = Voltag;
-                    r.Options = ops;
-                    OLDModelGeneratorProcessor.addTramesConcoxCapteurs(r);
-                }
-
             }
 
             byte protocol;
@@ -1478,38 +1365,6 @@ namespace OldCollecteur
             return BufferToSend;
 
         }
-
-
-
-        //public void saveContext()
-        //{
-        //    while (!_conBuffer.IsCompleted && !_dataBuffer.IsCompleted)
-        //    {
-        //        Console.Write("-");
-        //        try
-        //        {
-        //            Thread.Sleep(30000);
-        //        }
-        //        catch (Exception) { }
-        //    }
-        //}
-
-        //[MethodImpl(MethodImplOptions.Synchronized)]
-        //private static void Logging(String message, string balise)
-        //    {
-        //        try { 
-        //    using (StreamWriter sw = File.AppendText("Log\\Balises-" + DateTime.Now.ToString("dd-MM-yyyy") +"-" + balise + ".log"))
-        //    {
-        //        sw.WriteLine(DateTime.Now + ": "+message);
-        //        sw.Close();
-        //    }
-        //        }
-        //        catch (Exception)
-        //        {
-
-
-        //        }
-        //}
 
         private static void spliteTrameI2BFirmware(String[] info, Balise balise, ref TrameReal trameReal, DateTime receptionDateTime)
         {
@@ -2322,441 +2177,6 @@ namespace OldCollecteur
 
         }
 
-        private static void spliteTrameATrackCANEco(String[] info, Balise balise, ref TrameReal trameReal, DateTime receptionDateTime)
-        {
-            DateTime TempsReel = new DateTime(1970, 1, 1, 0, 0, 0, 0);
-            try
-            {
-                TempsReel = TempsReel.AddSeconds(Int64.Parse(info[5]));
-                // Console.WriteLine("TempsReel: " + TempsReel);
-                if ((TempsReel - DateTime.Now).TotalHours < 720)
-                {
-                    // Console.WriteLine("Date invalide: {0}", TempsReel);
-                    String Capteur = "000";
-                    int Carburant = Convert.ToInt32(info[17]);      //valeur en miliVolt position 17 dans la trame Ak1
-                    Carburant = Carburant / 25;                     //echantillonage 
-                    if (Carburant < 1000)
-                    {
-                        Capteur = convertAndformat(Carburant);      // convertir en chaine de caracter sur 3 positions
-                    }
-                    //Console.WriteLine("Capteur: " + Capteur);
-
-                    int Moteur = Convert.ToInt16((info[14]));
-                    if (Moteur % 2 == 1)
-                        Capteur += "M";
-                    else
-                        Capteur += "A";
-
-                    try
-                    {
-                        bool result;
-                        Decimal LatitudeReel;
-                        //Console.WriteLine(trame.Substring(9, 8));
-                        result = Decimal.TryParse(info[9], out LatitudeReel);
-                        if (!result)
-                        {
-                            LatitudeReel = 0;
-                        }
-                        LatitudeReel = LatitudeReel / 1000000;
-                        //Console.WriteLine("LatitudeReel: " + LatitudeReel);
-                        Decimal LongitudeReel;
-                        //Console.WriteLine(trame.Substring(17, 8));
-                        result = Decimal.TryParse(info[8], out LongitudeReel);
-                        if (!result)
-                        {
-
-                            LongitudeReel = 0;
-
-                        }
-                        LongitudeReel = LongitudeReel / 1000000;
-                        double vitesseReel;
-                        result = double.TryParse(info[15].Replace('.', ','), out vitesseReel);
-                        if (!result)
-                        {
-                            //Console.WriteLine("Erreur vitesseReel: {0}", vitesseReel);
-                            vitesseReel = 0;
-                        }
-
-                        Int16 Temperature;
-                        result = Int16.TryParse(info.Length < 20 ? "0" : info[19], out Temperature);
-                        if (!result)
-                        {
-                            //Console.WriteLine("Erreur Temperature: {0} ", Temperature);
-                            Temperature = 0;
-                        }
-                        else
-                            Temperature = (Int16)(Temperature - 40);
-
-                        if (info[18] != null && info[18].Trim().Length >= 12)
-                            OLDModelGeneratorProcessor.addTramesIdentDalas(new IdentDalas(balise, TempsReel, info[18].Trim()));
-
-                        Int16 directionReel;
-                        Double direction;
-                        result = Double.TryParse(info[10], out direction);
-                        if (!result)
-                        {
-                            //Console.WriteLine("Erreur directionReel: {0} ", directionReel);
-                            directionReel = 0;
-                        }
-                        else
-                        {
-                            if (direction > 360 || direction < 0)
-                                directionReel = 0;
-                            else
-                                directionReel = (Int16)direction;
-                        }
-
-                        //--2
-                        string trailer = (info.Length < 25 ? string.Empty : String.IsNullOrWhiteSpace(info[24]) ? string.Empty : info[24].Trim());
-                        try
-                        {
-                            if (trameReal != null)
-                            {
-                                //if ((trailer == null || trailer == "") && (trameReal.TrailerID != "" || trameReal.TrailerID != null))
-                                if ((trailer == string.Empty) && (trameReal.TrailerID != string.Empty))
-                                {// Update Trailer ID
-                                    Console.WriteLine("Trailer ID:{0} is Detached.", trameReal.TrailerID);
-                                    OLDModelGeneratorProcessor.addTramesTrailerID(new TrailerID(balise.Nisbalise, TempsReel, trameReal.TrailerID, trameReal.TrailerID));
-                                }
-                                //else if (trailer != null && trailer != "")
-                                else if ((trailer != string.Empty) && (trameReal.TrailerID == string.Empty))
-                                {// Insert Trailer ID
-                                    Console.WriteLine("Trailer ID: {0} is Attached.", trailer);
-                                    OLDModelGeneratorProcessor.addTramesTrailerID(new TrailerID(balise.Nisbalise, TempsReel, trailer, trameReal.TrailerID));
-                                }
-                            }
-                            else if (trailer != string.Empty)
-                            {
-                                Console.WriteLine("Trailer ID:{0}. First Trame Received", trailer);
-                                OLDModelGeneratorProcessor.addTramesTrailerID(new TrailerID(balise.Nisbalise, TempsReel, trailer, string.Empty));
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine("New Trailer ID: {0}, Old Trailer ID {1}.", trailer, (trameReal == null ? "NULL" : trameReal.TrailerID));
-                        }
-
-
-                        int index = 0; //ali 09/06/2021
-
-                        if (info.Length == 40)
-                            index = 1;
-
-                        OptionsAux options = new OptionsAux();
-                        try
-                        {
-                            Int16 moteur;
-                            result = Int16.TryParse(info[14], out moteur);
-                            if (!result)
-                            {
-                                moteur = 0;
-                            }
-
-                            Int16 MVolt; //Main voltage (Batterie Vehicule)
-                            result = Int16.TryParse(info.Length < 23 ? "0" : info[22], out MVolt);
-                            if (!result)
-                            {
-                                MVolt = 0;
-                            }
-
-                            Int16 BVolt; //Backup voltage (Batterie Boitier)
-                            result = Int16.TryParse(info.Length < 24 ? "0" : info[23], out BVolt);
-                            if (!result)
-                            {
-                                BVolt = 0;
-                            }
-
-
-                            double FuelLevel; //Niveau Carburant %
-                            result = double.TryParse(info.Length < 26 + index ? "0" : info[25 + index], out FuelLevel);
-                            if (!result)
-                            {
-                                FuelLevel = 0;
-                            }
-                            else
-                            {
-                                FuelLevel *= 0.4;
-                            }
-
-                            double FuelRate; //Consommation Carburant L/h
-                            result = double.TryParse(info.Length < 27 + index ? "0" : info[26 + index], out FuelRate);
-                            if (!result)
-                            {
-                                FuelRate = 0;
-                            }
-                            else
-                            {
-                                FuelRate *= 0.05;
-                            }
-
-                            double FuelEco; //Consommation Carburant Km/L
-                            result = double.TryParse(info.Length < 28 + index ? "0" : info[27 + index], out FuelEco);
-                            if (!result)
-                            {
-                                FuelEco = 0;
-                            }
-                            else
-                            {
-                                FuelEco = FuelEco / 512;
-                            }
-
-                            double FuelUsed;
-                            result = double.TryParse(info.Length < 29 + index ? "0" : info[28 + index], out FuelUsed);
-                            if (!result)
-                            {
-                                FuelUsed = 0;
-                            }
-                            else
-                            {
-                                FuelUsed = FuelUsed / 2;
-                            }
-
-                            Int32 Kilometrage;
-                            result = Int32.TryParse(info.Length < 30 + index ? "0" : info[29 + index], out Kilometrage);
-                            if (!result)
-                            {
-                                Kilometrage = 0;
-                            }
-
-                            Int32 TempMoteur;
-                            result = Int32.TryParse(info.Length < 31 + index ? "0" : info[30 + index], out TempMoteur);
-                            if (!result)
-                            {
-                                //Console.WriteLine("Erreur Temperature: {0} ", Temperature);
-                                TempMoteur = 0;
-                            }
-                            else
-                            {
-                                TempMoteur = (Int32)(TempMoteur - 40);
-                            }
-
-                            Int32 RPM;
-                            result = Int32.TryParse(info.Length < 32 + index ? "0" : info[31 + index], out RPM);
-                            if (!result)
-                            {
-                                //Console.WriteLine("Erreur Temperature: {0} ", Temperature);
-                                RPM = 0;
-                            }
-
-                            double TFEngin;  //temps de fonctionnement Moteur
-                            result = Double.TryParse(info.Length < 33 + index ? "0" : info[32 + index], out TFEngin);
-                            if (!result)
-                            {
-                                TFEngin = 0;
-                            }
-                            else
-                            {
-                                TFEngin *= 0.05;
-                            }
-
-
-                            Int32 AxelWeight0;
-                            Int32.TryParse(info.Length < 35 + index ? "0" : info[34 + index], out AxelWeight0);
-                            Int32 AxelWeight1;
-                            Int32.TryParse(info.Length < 36 + index ? "0" : info[35 + index], out AxelWeight1);
-                            Int32 AxelWeight2;
-                            Int32.TryParse(info.Length < 37 + index ? "0" : info[36 + index], out AxelWeight2);
-                            Int32 AxelWeight3;
-                            Int32.TryParse(info.Length < 38 + index ? "0" : info[37 + index], out AxelWeight3);
-                            Int32 AxelWeight4;
-                            Int32.TryParse(info.Length < 39 + index ? "0" : info[38 + index], out AxelWeight4);
-                            //options[64] = Convert.ToInt32(info.Length < 25 ? info[17] : info[24]); //valeur Carburant
-                            //options[65] = Temperature;
-                            //options[66] = moteur;
-                            options[71] = MVolt;//Main voltage (Batterie Vehicule)
-                            options[72] = BVolt;//Backup Voltage (Batterie Balise)
-                            try
-                            {
-                                options[75] = Convert.ToInt32(FuelLevel); // Valeur Niveau Carburant
-                            }
-                            catch (Exception e)
-                            {
-                                options[75] = 0;
-                                Console.WriteLine("Niveau Carburant exception: {0}", e.Message);
-                            }
-                            try
-                            {
-                                options[76] = Convert.ToInt32(FuelRate); // Valeur Consommation Carburant
-                            }
-                            catch (Exception e)
-                            {
-                                options[76] = 0;
-                                Console.WriteLine("Consommation Carburant exception: {0}", e.Message);
-                            }
-
-                            try
-                            {
-                                options[77] = Convert.ToInt32(FuelUsed); // Valeur Consommation Carburant
-                            }
-                            catch (Exception e)
-                            {
-                                options[77] = 0;
-                                Console.WriteLine("Consommation Carburant Total exception: {0}", e.Message);
-                            }
-
-                            try
-                            {
-                                options[78] = Convert.ToInt32(FuelEco); // Valeur Consommation Carburant
-                            }
-                            catch (Exception e)
-                            {
-                                options[78] = 0;
-                                Console.WriteLine("Carburant Economy Km/l exception: {0}", e.Message);
-                            }
-
-                            try
-                            {
-                                if (TempMoteur > 0)
-                                    options[79] = TempMoteur; // Temperature Coolant Engin
-                            }
-                            catch (Exception e)
-                            {
-                                //options[79] = 0;
-                                Console.WriteLine(" Temperature Coolant Engin exception: {0}", e.Message);
-                            }
-
-
-                            try
-                            {
-                                options[87] = Convert.ToInt32(RPM); // RMP Tours Minute
-                            }
-                            catch (Exception e)
-                            {
-                                options[87] = 0;
-                                Console.WriteLine(" RPM exception: {0}", e.Message);
-                            }
-
-
-                            try
-                            {
-                                options[89] = Convert.ToInt32(TFEngin); // Temps de Fonctionnement Moteur
-                            }
-                            catch (Exception e)
-                            {
-                                options[89] = 0;
-                                Console.WriteLine(" TFEngin exception: {0}", e.Message);
-                            }
-
-
-                            try
-                            {
-                                options[90] = Convert.ToInt32(Kilometrage); // Kilometrage Vehicule
-                            }
-                            catch (Exception e)
-                            {
-                                options[90] = 0;
-                                Console.WriteLine(" Kilomtrage exception: {0}", e.Message);
-                            }
-
-                            options[80] = AxelWeight0;
-                            options[81] = AxelWeight1;
-                            options[82] = AxelWeight2;
-                            options[83] = AxelWeight3;
-                            options[84] = AxelWeight4;
-
-
-
-                            //options[76] = Odometre;// Odometre
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine("Conversion Invalid Capteur .", e.Message);
-                            LogDBError("Conversion Invalid Capteur  : " + info + " \n Exception : " + e.Message, balise.Nisbalise);
-                        }
-
-                        if (LongitudeReel != 0 && LatitudeReel != 0)
-                        {
-                            if ((vitesseReel > 999) || (vitesseReel < 0))
-                            {
-                                LogDBError("Vitesse Hors limite", balise.Nisbalise);
-                            }
-                            else
-                            {
-                                if (Math.Abs(LongitudeReel) > 90 || Math.Abs(LatitudeReel) > 90)
-                                {
-                                    LogDBError("Position Hors limite,  : " + LongitudeReel + " et " + LatitudeReel, balise.Nisbalise);
-                                }
-                                else
-                                {
-                                    TrameReal tr = new TrameReal(balise, TempsReel, LatitudeReel, LongitudeReel, vitesseReel, Temperature, Capteur, directionReel, trailer, options, receptionDateTime);
-
-                                    if (trameReal == null || trameReal.Temps < tr.Temps)
-                                    {
-                                        if (!balise.EcoConduite)
-                                        {
-                                            OLDModelGeneratorProcessor.addTrame(tr);
-                                            trameReal = tr;
-                                        }
-                                        else if (info.Length == 40) // verification lengeur de trame 
-                                        {
-                                            OLDModelGeneratorProcessor.addTrameMidNightSplitTrajet(tr);
-                                            trameReal = tr;
-                                            string G_Force, Hix;
-                                            Int16? Gx = null;
-                                            Int16? Gy = null;
-                                            Int16? Gz = null;
-                                            Int16? CCarb = null;
-                                            try
-                                            {
-
-                                                G_Force = (info.Length < 26 ? "" : String.IsNullOrWhiteSpace(info[25]) ? "" : info[25].Trim());
-                                                if (G_Force != "")
-                                                {
-                                                    Hix = G_Force.Substring(0, 4);
-                                                    Gx = Convert.ToInt16("0x" + Hix, 16);
-
-                                                    Hix = G_Force.Substring(4, 4);
-                                                    Gy = Convert.ToInt16("0x" + Hix, 16);
-
-                                                    Hix = G_Force.Substring(8, 4);
-                                                    Gz = Convert.ToInt16("0x" + Hix, 16);
-                                                }
-
-                                                Int16 rpm = -1;
-                                                string rpm_s = (info.Length < 33 ? "" : String.IsNullOrWhiteSpace(info[32]) ? "" : info[32].Trim());
-
-                                                if (!Int16.TryParse(rpm_s, out rpm))
-                                                    rpm = -1;
-
-                                                TrameEco echo = new TrameEco(tr.Temps.AddHours(1), tr.Direction, (int)Math.Truncate(tr.Vitesse), balise.Nisbalise, (byte)(Moteur % 2 == 1 ? 1 : 0), rpm, Temperature, Gx, Gy, Gz, CCarb);
-                                                OLDModelGeneratorProcessor.addEcoTrame(echo);
-
-                                            }
-                                            catch (Exception ex)
-                                            {
-                                                Console.WriteLine("Echo conduit G_Force Invalide Values: '{0}' to a Decimal.", ex.Message);
-                                                LogDBError("Echo confuit G_Force Invalide Values" + info + " \n Exception : " + ex.Message, balise.Nisbalise);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch (FormatException fe)
-                    {
-                        Console.WriteLine("Unable to convert '{0}' to a Decimal.", fe.Message);
-                        LogDBError("Trame  Non Valide, Trame : " + info + " \n Exception : " + fe.Message, balise.Nisbalise);
-                    }
-
-                    catch (OverflowException ofe)
-                    {
-                        Console.WriteLine("'{0}' is outside the range of a Decimal.", ofe.Message);
-                        LogDBError("Trame  Non Valide, Trame : " + info + "Exception : " + ofe.Message, balise.Nisbalise);
-                    }
-
-                }
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Format de date invalide" + e);
-                LogDBError("Trame  Non Valide, Trame : " + info + "Exception : " + e.Message, balise.Nisbalise);
-            }
-
-
-        }
-
         private static void spliteTrameATrack(String[] info, Balise balise, ref TrameReal trameReal, DateTime receptionDateTime)
         {
             DateTime TempsReel = new DateTime(1970, 1, 1, 0, 0, 0, 0);
@@ -3431,341 +2851,6 @@ namespace OldCollecteur
                                         }
                                     }
 
-                                }
-                            }
-                        }
-                    }
-                    catch (FormatException fe)
-                    {
-                        Console.WriteLine("Unable to convert '{0}' to a Decimal.", fe.Message);
-                        LogDBError("Trame  Non Valide, Trame : " + info + " \n Exception : " + fe.Message, balise.Nisbalise);
-                    }
-
-                    catch (OverflowException ofe)
-                    {
-                        Console.WriteLine("'{0}' is outside the range of a Decimal.", ofe.Message);
-                        LogDBError("Trame  Non Valide, Trame : " + info + "Exception : " + ofe.Message, balise.Nisbalise);
-                    }
-                }
-            }
-            catch (FormatException exp)
-            {
-                Console.WriteLine("Format de date invalide" + exp);
-                PrincipalListner.Logging("FormatException", string.Format(balise.Nisbalise + " - Format de date invalide : ", exp.Message));
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Format de date invalide" + e);
-                LogDBError("Trame  Non Valide, Trame : " + info + "Exception : " + e.Message, balise.Nisbalise);
-            }
-        }
-
-        private static void spliteTrameEchoATrack(String[] info, Balise balise, ref TrameReal trameReal, DateTime receptionDateTime)
-        {
-            DateTime TempsReel = new DateTime(1970, 1, 1, 0, 0, 0, 0);
-            try
-            {
-
-                TempsReel = TempsReel.AddSeconds(Int64.Parse(info[5]));
-                // Console.WriteLine("TempsReel: " + TempsReel);
-                if ((TempsReel - DateTime.Now).TotalHours < 720)
-                {
-                    // Console.WriteLine("Date invalide: {0}", TempsReel);
-                    String Capteur = "000";
-                    int Carburant = Convert.ToInt32(info[17]); //Convert.ToInt32(info.Length < 25 ? info[17] : info[24]);      valeur en miliVolt position 24 dans la trame Ak1
-                    Carburant = Carburant / 25;                     //echantillonage 
-                    if (Carburant < 1000)
-                    {
-                        Capteur = convertAndformat(Carburant);      // convertir en chaine de caracter sur 3 positions
-                    }
-                    //Console.WriteLine("Capteur: " + Capteur);
-
-                    int Moteur = Convert.ToInt16((info[14]));
-                    //Console.WriteLine("Etat Moteur: " + Moteur);
-                    if (Moteur % 2 == 1)
-                        Capteur = Capteur + "M";
-                    else
-                        Capteur = Capteur + "A";
-
-                    try
-                    {
-                        bool result;
-                        Decimal LatitudeReel;
-                        //Console.WriteLine(trame.Substring(9, 8));
-                        result = Decimal.TryParse(info[9], out LatitudeReel);
-                        if (!result)
-                        {
-                            LatitudeReel = 0;
-                        }
-                        LatitudeReel = LatitudeReel / 1000000;
-                        //Console.WriteLine("LatitudeReel: " + LatitudeReel);
-                        Decimal LongitudeReel;
-                        //Console.WriteLine(trame.Substring(17, 8));
-                        result = Decimal.TryParse(info[8], out LongitudeReel);
-                        if (!result)
-                        {
-                            LongitudeReel = 0;
-                        }
-                        LongitudeReel = LongitudeReel / 1000000;
-                        double vitesseReel;
-                        result = double.TryParse(info[15].Replace('.', ','), out vitesseReel);
-                        if (!result)
-                        {
-                            //Console.WriteLine("Erreur vitesseReel: {0}", vitesseReel);
-                            vitesseReel = 0;
-                        }
-                        Int16 Temperature;
-                        result = Int16.TryParse(info[19], out Temperature);
-                        if (!result)
-                        {
-                            //Console.WriteLine("Erreur Temperature: {0} ", Temperature);
-                            Temperature = 2000;
-                        }
-
-
-                        if (info[18] != null && info[18].Trim().Length >= 12)
-                            OLDModelGeneratorProcessor.addTramesIdentDalas(new IdentDalas(balise, TempsReel, info[18].Trim()));
-
-                        Int16 directionReel;
-                        Double direction;
-                        result = Double.TryParse(info[10], out direction);
-                        if (!result)
-                        {
-                            //Console.WriteLine("Erreur directionReel: {0} ", directionReel);
-                            directionReel = 0;
-                        }
-                        else
-                        {
-                            if (direction > 360 || direction < 0)
-                                directionReel = 0;
-                            else
-                                directionReel = (Int16)direction;
-                        }
-
-                        int index = 0;
-                        if (balise.EcoConduite)
-                        {
-                            index = 1; // 
-                        }
-
-                        OptionsAux options = new OptionsAux();
-                        try
-                        {
-                            Int16 moteur;
-                            result = Int16.TryParse(info[14], out moteur);
-                            if (!result)
-                            {
-                                moteur = 0;
-                            }
-
-                            Int16 MVolt; //Main voltage (Batterie Vehicule)
-                            result = Int16.TryParse(info.Length < 23 ? "0" : info[22], out MVolt);
-                            if (!result)
-                            {
-                                MVolt = 0;
-                            }
-
-                            Int16 BVolt; //Backup voltage (Batterie Boitier)
-                            result = Int16.TryParse(info.Length < 24 ? "0" : info[23], out BVolt);
-                            if (!result)
-                            {
-                                BVolt = 0;
-                            }
-
-
-                            Int32 TempMoteur;
-                            result = Int32.TryParse(info.Length < 26 + index ? "0" : info[25 + index], out TempMoteur);
-                            if (!result)
-                            {
-
-                                TempMoteur = 0;
-                            }
-
-                            Int32 FuelUsed;
-                            result = Int32.TryParse(info.Length < 27 + index ? "0" : info[26 + index], out FuelUsed);
-
-                            if (!result)
-                            {
-
-                                FuelUsed = 0;
-                            }
-                            else
-                                FuelUsed = (Int32)(FuelUsed / 10);
-
-
-                            double FuelLevel; //Niveau Carburant %
-                            result = double.TryParse(info.Length < 28 + index ? "0" : info[27 + index], out FuelLevel);
-                            if (!result)
-                            {
-                                FuelLevel = 0;
-                            }
-
-                            Int32 Rpm;
-                            result = Int32.TryParse(info.Length < 31 + index ? "0" : info[30 + index], out Rpm);
-                            if (!result)
-                            {
-
-                                Rpm = 0;
-                            }
-
-
-                            options[71] = MVolt;//Main voltage (Batterie Vehicule)
-                            options[72] = BVolt;//Backup Voltage (Batterie Balise)
-                            try
-                            {
-                                options[75] = Convert.ToInt16(FuelLevel); // Valeur Niveau Carburant
-                            }
-                            catch (Exception e)
-                            {
-                                options[75] = 0;
-                                Console.WriteLine("Valeur Carburant exception: {0}", e.Message);
-                            }
-
-                            try
-                            {
-                                options[77] = Convert.ToInt32(FuelUsed); // Valeur Fuel Used (L)
-                            }
-                            catch (Exception e)
-                            {
-                                options[77] = 0;
-                                Console.WriteLine("Valeur Fuel Used exception: {0}", e.Message);
-                            }
-
-                            try
-                            {
-                                options[87] = Convert.ToInt32(Rpm); // Valeur RPM (Tours minute)
-                            }
-                            catch (Exception e)
-                            {
-                                options[87] = 0;
-                                Console.WriteLine("Valeur RPM exception: {0}", e.Message);
-                            }
-
-                            try
-                            {
-                                if (TempMoteur > 0)
-                                    options[79] = TempMoteur; // Valeur Temperature Moteur
-                            }
-                            catch (Exception e)
-                            {
-                                //options[79] = 0;
-                                Console.WriteLine("Valeur Temperature Moteur exception: {0}", e.Message);
-                            }
-
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine("Conversion Invalid Capteur .", e.Message);
-                            LogDBError("Conversion Invalid Capteur  : " + info + " \n Exception : " + e.Message, balise.Nisbalise);
-                        }
-
-                        if (LongitudeReel != 0 && LatitudeReel != 0)
-                        {
-                            if (vitesseReel > 999 || vitesseReel < 0)
-                            {
-                                LogDBError("Vitesse Hors limite", balise.Nisbalise);
-                            }
-                            else
-                            {
-                                if (Math.Abs(LongitudeReel) > 90 || Math.Abs(LatitudeReel) > 90)
-                                {
-                                    LogDBError("Position Hors limite,  : " + LongitudeReel + " et " + LatitudeReel, balise.Nisbalise);
-                                }
-                                else
-                                {
-                                    TrameReal tr = new TrameReal(balise, TempsReel, LatitudeReel, LongitudeReel, vitesseReel, (Int16)(Temperature / 10), Capteur, directionReel, options, receptionDateTime);
-
-                                    if (trameReal == null || trameReal.Temps < tr.Temps)
-                                    {
-                                        if (!balise.EcoConduite)
-                                        {
-                                            OLDModelGeneratorProcessor.addTrame(tr);
-                                            trameReal = tr;
-                                        }
-                                        else
-                                        {
-                                            OLDModelGeneratorProcessor.addTrameMidNightSplitTrajet(tr);
-                                            trameReal = tr;
-                                            string G_Force, Hix;
-                                            Int16? Gx = null;
-                                            Int16? Gy = null;
-                                            Int16? Gz = null;
-                                            Int16? CCarb = null;
-                                            try
-                                            {
-                                                G_Force = (info.Length < 25 ? "" : String.IsNullOrWhiteSpace(info[24]) ? "" : info[24].Trim());
-
-                                                if (G_Force != "")
-                                                {
-                                                    Hix = G_Force.Substring(0, 4);
-                                                    Gx = Convert.ToInt16("0x" + Hix, 16);
-
-                                                    Hix = G_Force.Substring(4, 4);
-                                                    Gy = Convert.ToInt16("0x" + Hix, 16);
-
-                                                    Hix = G_Force.Substring(8, 4);
-                                                    Gz = Convert.ToInt16("0x" + Hix, 16);
-                                                }
-
-
-                                                int m = 0;
-                                                m = Convert.ToInt16(Moteur);
-
-                                                Int16 rpm = -1;
-
-                                                string rpm_s = (info.Length < 32 ? "" : String.IsNullOrWhiteSpace(info[31]) ? "" : info[31].Trim());
-                                                if (rpm_s != "")
-                                                {
-                                                    rpm = Convert.ToInt16(rpm_s);
-                                                }
-
-                                                TrameEco echo = new TrameEco(tr.Temps.AddHours(1), tr.Direction, (int)Math.Truncate(tr.Vitesse), balise.Nisbalise, (byte)(m % 2 == 1 ? 1 : 0), rpm, Temperature, Gx, Gy, Gz, CCarb);
-                                                OLDModelGeneratorProcessor.addEcoTrame(echo);
-
-                                                //if (info[11] == "114")
-                                                //{
-                                                //    Connection.Logging("Début évènement Freinage brusque", balise.Nisbalise);
-                                                //    Console.WriteLine("Début évènement Freinage brusque: " + balise.Nisbalise);
-                                                //}
-
-                                                //if (info[11] == "115")
-                                                //{
-                                                //    Connection.Logging("Fin évènement Freinage brusque", balise.Nisbalise);
-                                                //    Console.WriteLine("Fin évènement Freinage brusque: " + balise.Nisbalise);
-                                                //}
-
-                                                //if (info[11] == "116")
-                                                //{
-                                                //    Connection.Logging("Début évènement Accélération  brusque", balise.Nisbalise);
-                                                //    Console.WriteLine("Début évènement Accélération  brusque: " + balise.Nisbalise);
-                                                //}
-
-                                                //if (info[11] == "117")
-                                                //{
-                                                //    Connection.Logging("Fin évènement Accélération  brusque", balise.Nisbalise);
-                                                //    Console.WriteLine("Fin évènement Accélération  brusque: " + balise.Nisbalise);
-                                                //}
-
-                                                //if (info[11] == "118")
-                                                //{
-                                                //    Connection.Logging("Début évènement Virage  brusque", balise.Nisbalise);
-                                                //    Console.WriteLine("Début évènement Virage  brusque: " + balise.Nisbalise);
-                                                //}
-
-                                                //if (info[11] == "119")
-                                                //{
-                                                //    Connection.Logging("Fin évènement Virage  brusque", balise.Nisbalise);
-                                                //    Console.WriteLine("Fin évènement Virage  brusque: " + balise.Nisbalise);
-                                                //}
-
-                                            }
-                                            catch (Exception ex)
-                                            {
-                                                Console.WriteLine("Echo conduit G_Force Invalide Values: '{0}' to a Decimal.", ex.Message);
-                                                LogDBError("Echo confuit G_Force Invalide Values" + info + " \n Exception : " + ex.Message, balise.Nisbalise);
-                                            }
-                                        }
-                                    }
                                 }
                             }
                         }

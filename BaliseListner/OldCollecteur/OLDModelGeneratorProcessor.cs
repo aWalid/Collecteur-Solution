@@ -32,7 +32,7 @@ namespace OldCollecteur
         private static int nbrTrameSarensAdded;
         private static int nbrTrailerIDAdded;
 
-        private static int nbrTrameEcoAdded;
+
         private static int nbrTrameSondeAdded;
         static OLDModelGeneratorProcessor()
         {
@@ -49,7 +49,7 @@ namespace OldCollecteur
             nbrTrameMissionAdded = 0;
             nbrTrameSarensAdded = 0;
 
-            
+
 
             Thread threadTrameConsomater = new Thread(ComsommeTrame);
             threadTrameConsomater.Start();
@@ -78,12 +78,6 @@ namespace OldCollecteur
             Thread threadTrameSarensConsomer = new Thread(consommeTrameSarens);
             threadTrameSarensConsomer.Start();
 
-            /*Eco-Conduite 20200119 par oualid*/
-            nbrTrameEcoAdded = 0;
-            Thread threadTrameEcoConsomer = new Thread(ConsommeTrameEco);
-            threadTrameEcoConsomer.Start();
-
-
             /*Sonde 20211026 par oualid*/
             nbrTrameSondeAdded = 0;
             Thread threadTrameSondeConsomer = new Thread(ConsommeTrameSonde);
@@ -93,7 +87,7 @@ namespace OldCollecteur
             Thread threadCapteursSondeTemperateurConsomer = new Thread(consommeCapteursSondeTemperateur);
             threadCapteursSondeTemperateurConsomer.Start();
 
-           
+
 
         }
 
@@ -269,8 +263,8 @@ namespace OldCollecteur
                     Console.WriteLine("Buffer n'a pas pu lire les données.");
                 }
                 finally
-                {  
-                   
+                {
+
                     if (SortedQueue.Count > 0)
                         OLDModelGeneratorProcessor.addTramesCapteursSondeTemperateurNotInserted(SortedQueue.ToList());
                 }
@@ -501,7 +495,6 @@ namespace OldCollecteur
 
         private static Dictionary<String, TrameReal> queueTrameRealUpdater = new Dictionary<String, TrameReal>();
         private static Queue<TrameReal> queue = new Queue<TrameReal>();
-        private static Queue<TrameEco> queueEco = new Queue<TrameEco>();
         private static Queue<TrameSonde> queueSonde = new Queue<TrameSonde>();
 
         private static Queue<TrameReal> SarensQueue = new Queue<TrameReal>();
@@ -509,7 +502,7 @@ namespace OldCollecteur
         // File des Trailer ID
         private static Queue<TrailerID> queueTrailerID = new Queue<TrailerID>();
         private static Queue<BaliseStat> statBalise = new Queue<BaliseStat>();
-        private static Queue<TrameReal> trameCapteurs = new Queue<TrameReal>();   
+        private static Queue<TrameReal> trameCapteurs = new Queue<TrameReal>();
         private static Queue<TrameReal> trameCapteursSondeTemperateur = new Queue<TrameReal>();
         private static Queue<Trame> trameBruteQueue = new Queue<Trame>();
         private static Queue<TrameReal> tramePOIQueue = new Queue<TrameReal>();
@@ -519,10 +512,9 @@ namespace OldCollecteur
         private static SyncEvents statConsomeSyncEvents = new SyncEvents();
         private static SyncEvents TrajetSyncEvents = new SyncEvents();
         private static SyncEvents trameConsomeSyncEvents = new SyncEvents();
-        private static SyncEvents trameEcoConsomeSyncEvents = new SyncEvents();
         private static SyncEvents trameSondeConsomeSyncEvents = new SyncEvents();
         private static SyncEvents trameRealUpdaterConsomeSyncEvents = new SyncEvents();
-        private static SyncEvents trameCapteursConsomeSyncEvents = new SyncEvents();   
+        private static SyncEvents trameCapteursConsomeSyncEvents = new SyncEvents();
         private static SyncEvents trameCapteursSondeTemperateurConsomeSyncEvents = new SyncEvents();
         private static SyncEvents trameSarensConsomeSyncEvents = new SyncEvents();
         private static SyncEvents trameTrameBruteSyncEvents = new SyncEvents();
@@ -532,24 +524,6 @@ namespace OldCollecteur
         // Trailer ID Evenement 
         private static SyncEvents TrailerIDConsomeSyncEvents = new SyncEvents();
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void addEcoTrame(TrameEco teco)
-        {
-
-            if (teco == null)
-                return;
-
-
-            lock (((ICollection)queueEco).SyncRoot)
-            {
-                queueEco.Enqueue(teco);
-                trameEcoConsomeSyncEvents.NewItemEvent.Set();
-                nbrTrameEcoAdded++;
-            }
-
-
-
-        }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static void addSondeTrame(TrameSonde teso)
@@ -569,9 +543,9 @@ namespace OldCollecteur
 
 
         }
-        
+
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void addTrame(TrameReal trame , bool notSondetemperateur = true )
+        public static void addTrame(TrameReal trame, bool notSondetemperateur = true)
         {
             TrameReal trameRealAdded = null;
             if (trame == null)
@@ -598,48 +572,6 @@ namespace OldCollecteur
             }
             else
                 if (trame.Balise.TrajeEnCours.UpdateTrajet(trame, ref trameRealAdded))
-            {
-                if (trame.Balise.TrajeEnCours.VMax >= 10 && trame.Balise.TrajeEnCours.Duree >= 60)
-                    addTrajet((Trajet)trame.Balise.TrajeEnCours.Clone());
-                trame.Balise.TrajeEnCours.initializeTrajet(trame);
-
-            }
-            else if (trameRealAdded != null)
-            {
-                addTramesPOIs(trameRealAdded);
-                lock (((ICollection)queue).SyncRoot)
-                {
-                    queue.Enqueue(trameRealAdded);
-                    trameConsomeSyncEvents.NewItemEvent.Set();
-                    nbrAdded++;
-                }
-            }
-
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void addTrameMidNightSplitTrajet(TrameReal trame)
-        {
-            TrameReal trameRealAdded = null;
-            if (trame == null)
-                return;
-
-            addTramesPOIs(trame);
-            addTramesCapteurs(trame);
-            addTramesMission(trame);
-            lock (((ICollection)queue).SyncRoot)
-            {
-                queue.Enqueue(trame);
-                trameConsomeSyncEvents.NewItemEvent.Set();
-                nbrAdded++;
-            }
-
-            if (trame.Balise.TrajeEnCours == null)
-            {
-                trame.Balise.TrajeEnCours = new Trajet(trame);
-            }
-            else
-                if (trame.Balise.TrajeEnCours.UpdateTrajetMidNightSplitTrajet(trame, ref trameRealAdded))
             {
                 if (trame.Balise.TrajeEnCours.VMax >= 10 && trame.Balise.TrajeEnCours.Duree >= 60)
                     addTrajet((Trajet)trame.Balise.TrajeEnCours.Clone());
@@ -708,8 +640,6 @@ namespace OldCollecteur
             }
 
         }
-
-
         public static void addNonInsetedTrame(List<TrameReal> listTrames)
         {
             if (listTrames == null || listTrames.Count == 0)
@@ -725,21 +655,6 @@ namespace OldCollecteur
 
         }
 
-        public static void addNonInsetedTrameEco(List<TrameEco> listTrames)
-        {
-            if (listTrames == null || listTrames.Count == 0)
-                return;
-
-            lock (((ICollection)queueEco).SyncRoot)
-            {
-                foreach (TrameEco trame in listTrames)
-                    queueEco.Enqueue(trame);
-                nbrTrameEcoAdded = nbrTrameEcoAdded + listTrames.Count;
-                trameEcoConsomeSyncEvents.NewItemEvent.Set();
-
-            }
-
-        }
 
         public static void addNonInsetedTrameSonde(List<TrameSonde> listTrames)
         {
@@ -832,46 +747,7 @@ namespace OldCollecteur
         }
 
 
-        private static void ConsommeTrameEco()
-        {
-            while (nbrTrameEcoAdded > 0 || WaitHandle.WaitAny(trameEcoConsomeSyncEvents.EventArray) != 1)
-            {
 
-                Queue<TrameEco> dataQueueCopy = null;
-
-                lock (((ICollection)queueEco).SyncRoot)
-                {
-                    try
-                    {
-                        dataQueueCopy = new Queue<TrameEco>(queueEco.ToArray());
-                        queueEco.Clear();
-                        if (PrincipalListner.config.Debug)
-                            Console.WriteLine("Trame eco consomé nbr :{0}.", nbrTrameEcoAdded);
-                        nbrTrameEcoAdded = 0;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("insertAllTrameEcoErreur:\t" + ex.Message);
-                        DataBase.Logging("insertAllTrameEcoErreur", ex.ToString());
-                    }
-                }
-
-                //try
-                //{
-                DataBase.insertAllTrameEco(dataQueueCopy.ToList());
-                //}
-                //catch (Exception ex)
-                //{
-                //    Console.WriteLine(ex.Message);
-                //    DataBase.Logging("insertAllTrameEcoErreur", "1: " + ex.ToString());
-                //}
-                //TrameInsertThread trameInserted = new TrameInsertThread(dataQueueCopy.ToList());
-                //ThreadPool.QueueUserWorkItem(trameInserted.insertAllTrame);
-
-            }
-        }
-        //
-        //  
         private static void ConsommeTrameSonde()
         {
             while (nbrTrameSondeAdded > 0 || WaitHandle.WaitAny(trameSondeConsomeSyncEvents.EventArray) != 1)
@@ -886,7 +762,7 @@ namespace OldCollecteur
                         dataQueueCopy = new Queue<TrameSonde>(queueSonde.ToArray());
                         queueSonde.Clear();
                         if (PrincipalListner.config.Debug)
-                            Console.WriteLine("Trame sonde consomé nbr :{0}.", nbrTrameEcoAdded);
+                            Console.WriteLine("Trame sonde consomé nbr :{0}.", nbrTrameSondeAdded);
                         nbrTrameSondeAdded = 0;
                     }
                     catch (Exception ex)

@@ -33,7 +33,7 @@ namespace BaliseListner.DataAccess
         private static DbProviderFactory dbpf;
         private static SqlConnection sqlConnectionForBaliseConnection = new SqlConnection(connectionString);
         private static readonly SqlConnection oConn = new SqlConnection(connectionString);
-        private static readonly SqlConnection oConnEco = new SqlConnection(connectionString);
+
         private static readonly SqlConnection oConnSonde = new SqlConnection(connectionString);
 
         private static SqlConnection sqlConnectionForKeyDalasInsert = new SqlConnection(connectionString);
@@ -63,19 +63,6 @@ namespace BaliseListner.DataAccess
                 throw new DataBaseCommunicationException("Echec d'ouvrire une Connexion.", ex);
             }
             return oConn;
-        }
-        private static SqlConnection openConnectionEco()
-        {
-            try
-            {
-                oConnEco.Open();
-            }
-            catch (Exception ex)
-            {
-                PrincipalListner.SyncBase.BaseEchecThreadEvent.Set();
-                throw new DataBaseCommunicationException("Echec d'ouvrire une Connexion.", ex);
-            }
-            return oConnEco;
         }
         private static SqlConnection openConnectionSonde()
         {
@@ -529,104 +516,6 @@ namespace BaliseListner.DataAccess
             return Version;
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void UpdateBaliseEcoConduite(ref Dictionary<int, Balise> boitiers, ref ConnectionManager<Connection> connections)
-        {
-            Console.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Début synchronisation boitiers eco-conduite.");
-
-            SqlCommand oCmd;
-            SqlDataReader reader = null;
-            SqlConnection RefrechBalise = null;
-            //bool exec = false;
-
-            try
-            {
-                using (RefrechBalise = new SqlConnection(connectionString))
-                {
-                    // RefrechBalise = openRefrechBaliseConnection();
-                    RefrechBalise.Open();
-                    oCmd = RefrechBalise.CreateCommand();
-                    oCmd.CommandType = CommandType.StoredProcedure;
-                    oCmd.CommandText = "BaliseEchoConduiteList";
-
-                    DataTable dt = new DataTable();
-
-                    using (SqlDataReader dr = oCmd.ExecuteReader())
-                    {
-                        dt.Load(dr);
-                    }
-
-
-                    Monitor.Enter(boitiers);
-                    try
-                    {
-                        foreach (Balise b in boitiers.Values)
-                        {
-                            // mise a jour liste boitiers 
-                            if (dt.Select("Matricule = " + b.Matricule.ToString()).Length != 0)
-                                b.EcoConduite = true;
-                            else b.EcoConduite = false;
-                        }
-
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error("Erreur dans Monitor.Enter(boitiers) {0}", ex);
-                    }
-                    finally
-                    {
-                        Monitor.Exit(boitiers);
-                    }
-
-                    Monitor.Enter(connections);
-                    try
-                    {
-                        foreach (Connection con in connections)
-                        {
-                            // mise a jour liste connections 
-                            if (dt.Select("Matricule = " + con.boitier.Matricule.ToString()).Length != 0)
-                                con.boitier.EcoConduite = true;
-                            else con.boitier.EcoConduite = false;
-
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error("Erreur dans Monitor.Enter(connections) {0}", ex);
-                    }
-                    finally
-                    {
-                        Monitor.Exit(connections);
-                    }
-
-
-
-
-
-
-
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error("Erreur dans l'execution proc isConnected pour Boities {0}", ex);
-                //Console.WriteLine("Erreur de communication avec la base : " + ex.Message);
-                throw new DataBaseCommunicationException("Erreur de synchronisation avec la base ", ex);
-            }
-            finally
-            {
-                if (reader != null)
-                    reader.Close();
-
-                if (RefrechBalise != null)
-                    RefrechBalise.Close();
-                logger.Debug("Connexion Base Données Fermé  avec succé.");
-            }
-
-            Console.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Fin synchronisation boitiers eco-conduite.");
-
-        }
-
         public static int GetAvailableMission(bool Update, int Version, ref List<Mission> missions)
         {
 
@@ -874,125 +763,7 @@ namespace BaliseListner.DataAccess
             }
 
         }
-
-        public static void insertAllTrameEco(List<TrameEco> dataQueueCopy)
-        {
-            SqlConnection sqlConnection = null;
-            DataTable dataTable = new DataTable("TypeEcoTrames");
-
-            try
-            {
-
-                dataTable.Columns.Add("Temps", typeof(DateTime));
-                dataTable.Columns.Add("Vitesse", typeof(Int16));
-                dataTable.Columns.Add("Direction", typeof(Int16));
-                dataTable.Columns.Add("NISBalise", typeof(string));
-                dataTable.Columns.Add("Moteur", typeof(byte));
-                dataTable.Columns.Add("RPM", typeof(Int16));
-                dataTable.Columns.Add("TCoolant", typeof(Int16));
-                dataTable.Columns.Add("Gx", typeof(Int16));
-                dataTable.Columns.Add("Gy", typeof(Int16));
-                dataTable.Columns.Add("Gz", typeof(Int16));
-                dataTable.Columns.Add("CCarb", typeof(Int16));
-                dataTable.PrimaryKey = new DataColumn[] {dataTable.Columns["Temps"],
-                                         dataTable.Columns["NISBalise"]};
-
-
-                foreach (TrameEco trame in dataQueueCopy)
-                {
-                    try
-                    {
-                        //Console.WriteLine("Nbre de trames pas encore traité {0}.", nbrTrame.ToString());
-                        dataTable.Rows.Add(trame.Temps, trame.Vitesse, trame.Direction,
-                        trame.NisBalise, trame.Moteur, trame.RPM, trame.TCoolant, trame.Gx, trame.Gy, trame.Gz, trame.CCarb);
-                    }
-                    catch (Exception e)
-                    {
-                        Logging("TrameDataEcoDepliques", "Insertion de trames dupliqués.", e);
-                    }
-
-                }
-
-
-                bool exec = false;
-
-                sqlConnection = openConnectionEco();
-                SqlCommand command = sqlConnection.CreateCommand();
-                command.CommandType = System.Data.CommandType.StoredProcedure;
-                command.CommandText = "[dbo].[InsertEcoTrames]";
-                command.CommandTimeout = 500;
-                SqlParameter parameter = new SqlParameter();
-
-                parameter.ParameterName = "@Sample";
-                parameter.SqlDbType = SqlDbType.Structured;
-                parameter.Value = dataTable;
-                command.Parameters.Add(parameter);
-
-
-
-                int i = 0;
-                do
-                {
-                    try
-                    {
-                        int numberOfRowsUpdated = command.ExecuteNonQuery();
-                        //Console.WriteLine("Nombre de rows updated = " + numberOfRowsUpdated.ToString());
-                        exec = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        i++;
-                        command.Cancel();
-                        Logging("TrameDataEco", "Insertion des trames Erreur dans une tentative no:" + i.ToString(), ex);
-                        Thread.Sleep(1000);
-
-                    }
-                } while (i < 2 && !exec);
-
-                if (!exec)
-                {
-                    //Console.WriteLine("BD Server ne repond pas, sauvegarde du contexte en cours.");
-                    Logging("TrameDataEco", "liste des trames restocké dans le depot nbr : " + dataQueueCopy.Count);
-
-                    if (dataQueueCopy.Count < 500)
-                    {
-                        OLDModelGeneratorProcessor.addNonInsetedTrameEco(dataQueueCopy);
-                        dataQueueCopy.Clear();
-                    }
-                    else
-                    {
-                        LoggingXML("TrameEcoData", dataTable);
-                    }
-
-                }
-
-
-                try
-                {
-                    sqlConnection.Close();
-                }
-                catch (Exception)
-                {
-                    Console.WriteLine("la connexion au serveur BD n'a pas pu se fermé.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logging("TrameDataEco", "la table de trames ", ex);
-                if (dataQueueCopy.Count < 500)
-                    OLDModelGeneratorProcessor.addNonInsetedTrameEco(dataQueueCopy);
-                else
-                    LoggingXML("TrameEcoData", dataTable);
-
-            }
-            finally
-            {
-                if (sqlConnection != null)
-                    sqlConnection.Close();
-            }
-
-        }
-
+ 
         public static void insertAllTrameSonde(List<TrameSonde> dataQueueCopy)
         {
             SqlConnection sqlConnection = null;
