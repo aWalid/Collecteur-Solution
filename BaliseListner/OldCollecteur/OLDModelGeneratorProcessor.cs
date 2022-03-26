@@ -457,12 +457,6 @@ namespace OldCollecteur
             }
 
         }
-
-        public static void addTramesConcoxCapteurs(TrameReal tr)
-        {
-            addTramesCapteurs(tr);
-        }
-
         public static void addTramesIdentDalas(IdentDalas trame)
         {
             if (trame == null)
@@ -470,7 +464,6 @@ namespace OldCollecteur
 
             lock (((ICollection)queueIdentDalas).SyncRoot)
             {
-
                 queueIdentDalas.Enqueue(trame);
                 IdentDalasConsomeSyncEvents.NewItemEvent.Set();
                 nbrTrameKeyAdded++;
@@ -681,40 +674,11 @@ namespace OldCollecteur
 
         public static void addDeconnect(Balise boitier)
         {
-            if (boitier == null || boitier.Nisbalise == null || boitier.Nisbalise.Length == 0)
-                return;
-            if (PrincipalListner.config.Debug)
-                Console.WriteLine("la Balise {0} vient de se déconnecter", boitier.Nisbalise);
-            try
-            {
-                if (PrincipalListner.connections.findConnectionByNISBalise(boitier))
-                    return;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Boitier: " + boitier.Nisbalise + "- Exception dans la recherche des connection addDeconnect() : " + e.Message);
-                return;
-            }
-
-            addStatBalise(new BaliseStat(boitier, false, System.DateTime.Now));
+   addStatBalise(new BaliseStat(boitier, false, System.DateTime.Now));
         }
         public static void addConnect(Balise boitier)
         {
-            if (boitier == null || boitier.Nisbalise == null || boitier.Nisbalise.Length == 0)
-                return;
-            if (PrincipalListner.config.Debug)
-                Console.WriteLine("la Balise {0} vient de se Connecter.", boitier.Nisbalise);
-            try
-            {
-                if (PrincipalListner.connections.findConnectionByNISBalise(boitier))
-                    return;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Boitier: " + boitier.Nisbalise + "- Exception dans la recherche des connection addConnect() : " + e.Message);
-                return;
-            }
-
+           
             addStatBalise(new BaliseStat(boitier, true, System.DateTime.Now));
         }
         private static void ComsommeTrame()
