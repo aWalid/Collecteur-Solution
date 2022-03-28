@@ -26,10 +26,8 @@ namespace BaliseListner
         {
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
         }
-
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
-
             if ((e.SpecialKey == ConsoleSpecialKey.ControlBreak) || (e.SpecialKey == ConsoleSpecialKey.ControlC))
             {
                 Console.WriteLine("Asynchronous shutdown Started");
@@ -40,7 +38,6 @@ namespace BaliseListner
                 Environment.Exit(1);
             }
         }
-
         static void Main(string[] args)
         {
             log4net.Config.XmlConfigurator.Configure();
