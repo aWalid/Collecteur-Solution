@@ -45,13 +45,9 @@ namespace BaliseListner.ThreadListener
                 //TrameConsumer.threadTrameSarensReader();
                 while (WaitHandle.WaitAny(syncBase.EventArray, sleepTime) != 1)
                 {
-
                     try
                     {
                         principalListner.RefreshData();
-
-                         
-
                         Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " Refresh All balises finished.");
                         sleepTime = 300000;
                         if (!PrincipalListner.baseActive)
@@ -62,11 +58,9 @@ namespace BaliseListner.ThreadListener
                     }
                     catch (DataBaseCommunicationException baseCommException)
                     {
-
                         logger.Error("Base de données inactive", baseCommException);
                         sleepTime = 2000;
                         principalListner.BDHorsServices();
-
                     }
                     //Thread.Sleep(sleepTime);
                 }
@@ -96,15 +90,12 @@ namespace BaliseListner.ThreadListener
                     {
                         config.Port = 30002;
                         logger.Warn("le numero de port dans le fichier de configuration est invalide .");
-
                     }
                 }
                 catch (Exception exp)
                 {
-
                     logger.Warn("l'adresse Ip dans le fichier de configuration est incorrect.", exp);
                     config.setIPAddress(getLocalAdress());
-
                 }
 
                 logger.Info("Le collecteur charge  les parametres depuit config.xml.");
@@ -153,15 +144,30 @@ namespace BaliseListner.ThreadListener
         {
             try
             {
+                Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} DeconnectionBalises start");
                 syncBase.ExitThreadEvent.Set();
                 List<BaliseStat> listStatBalise = new List<BaliseStat>();
+                int nb_connections = PrincipalListner.connections.Count;
+                int i = 0;
                 foreach (Connection con in PrincipalListner.connections)
                 {
+                    i++;
+                    if (i % 50 == 0)
+                    {
+                        Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Closing {i}\tconnections, count:{nb_connections}");
+                        DataBase.insertStatBalise(listStatBalise);
+                        listStatBalise.Clear();
+                    }
+                    if (con == null)
+                        continue;
                     if (con.boitier == null || con.boitier.Nisbalise.Length == 0)
                         continue;
                     listStatBalise.Add(new BaliseStat(con.boitier, false, DateTime.Now));
                     con.CloseConnection();
+
                 }
+                Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Closing {i}\tconnections, count:{nb_connections}");
+                Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} DeconnectionBalises end");
                 DataBase.insertStatBalise(listStatBalise);
                 PrincipalListner.Logging("FermetureCollecteur", string.Format("insertion des etats de balises dans la base, nbr de etat {0}", listStatBalise.Count));
             }
@@ -274,24 +280,18 @@ namespace BaliseListner.ThreadListener
 
         public void RefreshData()
         {
-
             Version = DataBase.GetBalise(true, Version, ref boitiers);
-
         }
 
 
 
         public void Start()
         {
-
             Console.Write(DateTime.Now.ToString("HH:mm:ss") + " Démarrage du Collecteur... ");
             SetupServerSocket();
-
             serverSocket.BeginAcceptTcpClient(new AsyncCallback(AcceptCallback), serverSocket);
             logger.Debug("Socket server demarre avec succe : ");
             Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " OK. en Ecoute.");
-
-
         }
         public void StopListener()
         {
@@ -300,13 +300,14 @@ namespace BaliseListner.ThreadListener
         }
         private void AcceptCallback(IAsyncResult result)
         {
-            if (!baseActive)
-                WaitHandle.WaitAny(SyncBase.EventArray);
             if (_quitRequested)
             {
                 _waitHandle.Set();
                 return;
             }
+            if (!baseActive)
+                WaitHandle.WaitAny(SyncBase.EventArray);
+
             try
             {
 
