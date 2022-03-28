@@ -508,9 +508,9 @@ namespace CONCOXParser.Parsers
                     ParsedTrame.Add("North", GetNorthStringValue(inputTrame));
                     ParsedTrame.Add("Speed", GetSpeedStringValue(inputTrame));
                     ParsedTrame.Add("Cap", GetCapStringValue(inputTrame));
-                    if (protocolNumber == "12")
+                    if (protocolNumber == "12"|| protocolNumber == "16")
                         ParsedTrame.Add("Ignition", GetWeTrackIgnitionStringValue(inputTrame));
-                    else if (protocolNumber == "22")
+                    else if (protocolNumber == "22" )
                         ParsedTrame.Add("Ignition", GetIgnitionStringValue(inputTrame));
 
                     if (protocolNumber == "16")
@@ -605,7 +605,6 @@ namespace CONCOXParser.Parsers
             return inputTrame.Substring(0, 4);
         }
 
-
         public static DataLocationTrame ParseWeTrackDataLocationTrame(string inputTrame)
         {
             DataLocationTrame trame = new DataLocationTrame();
@@ -620,7 +619,7 @@ namespace CONCOXParser.Parsers
             trame.Speed = GetSpeedNumber(inputTrame);
             trame.cap = GetCap(inputTrame);
             trame.Ignition = GetWeTrackIgnition(inputTrame);
-            trame.Alerm = GetWeTrackAlerm(inputTrame);
+           // trame.Alerm = GetWeTrackAlerm(inputTrame);
             return trame;
         }
 

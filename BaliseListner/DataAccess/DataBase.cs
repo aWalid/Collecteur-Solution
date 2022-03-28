@@ -485,12 +485,12 @@ namespace BaliseListner.DataAccess
                     oCmd.Dispose();
                     if (!exec)
                     {
-                        Console.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Echec Synchronisation");
+                        Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " Echec Synchronisation");
                         throw new DataBaseCommunicationException("Erreur de synchronisation avec la base ");
                     }
                     else
                     {
-                        Console.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Syncronisation reussi.");
+                        Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " Syncronisation reussi.");
                         if (RefrechBalise != null)
                             RefrechBalise.Close();
                         Version = (int)paraReturne.Value;
@@ -763,7 +763,7 @@ namespace BaliseListner.DataAccess
             }
 
         }
- 
+
         public static void insertAllTrameSonde(List<TrameSonde> dataQueueCopy)
         {
             SqlConnection sqlConnection = null;

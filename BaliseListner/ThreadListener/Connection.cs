@@ -110,18 +110,17 @@ namespace BaliseListner.ThreadListener
                             //LoggingCommunication("Connection", $"Connection: Succes\t{RemoteHote}\t{boitier.Nisbalise}\t{boitier.Matricule}");
                         }
 
-
-                        /// <Code pour tester crystage de données: boitier atrack>
-                        ///  string textDecoder = "";
-                        /// </Code pour tester crystage de données: boitier atrack>
+                        #region    Atrack crypté            
+                        ///  string textDecoder = "";              
+                        #endregion
 
                         string trame = "";
                         if (bytesRead > 12)
                         {
 
                             trame = Encoding.ASCII.GetString(BufferIn, 12, bytesRead - 12);// text.Substring(text.IndexOf("@"));
-
-                            //  <Code pour tester crystage de données: boitier atrack>
+                    
+                            #region    Atrack crypté
                             //if (boitier.Nisbalise == "359316071459900")
                             //{
                             //    int DataEcryptedPos = getDataEcryptedPos(BufferConnect, 11);
@@ -130,16 +129,17 @@ namespace BaliseListner.ThreadListener
                             //        textDecoder = Encoding.ASCII.GetString(BufferIn.ToList().GetRange(0, DataEcryptedPos).ToArray()) + DecryptStringFromBytes_Aes(BufferIn.ToList().GetRange(DataEcryptedPos, bytesRead - DataEcryptedPos).ToArray(), ATPassWord);
                             //        trame = textDecoder.Substring(text.IndexOf("@"));
                             //  }
-                            // }
-                            // </Code pour tester crystage de données: boitier atrack>
-
+                            // }  
+                            #endregion
+                            
                             currentDate = Collect.splitTrame(new Trame(boitier, trame, receptionTime), Socket, currentDate, ref trameReal);
                         }
 
                         if (trameReal != null)
                             OLDModelGeneratorProcessor.addTrameReal(trameReal);
+                     
+                        #region    Atrack crypté
 
-                        // <Code pour tester crystage de données: boitier atrack>
                         //if (boitier.Nisbalise == "359316071459900")
                         //{
                         //    Logging("Crypté   : " + text, boitier.Nisbalise);
@@ -147,15 +147,18 @@ namespace BaliseListner.ThreadListener
                         //        Logging("Décrypté : " + textDecoder, boitier.Nisbalise);
                         //}
                         //else
-                        //</Code pour tester crystage de données: boitier atrack>
-
+                        #endregion
 
                         Logging($"{BitConverter.ToString(BufferConnect.ToList().GetRange(0, 12).ToArray()).Replace("-", "")}{trame}", boitier.Nisbalise);
                         Socket.Send(Encoding.ASCII.GetBytes(OK), OK.Length, SocketFlags.None);
                         Socket.BeginReceive(BufferIn, 0, BufferIn.Length, SocketFlags.None, new AsyncCallback(ReceiveCallback), this);
 
                     }
-                    else if ((BufferConnect[0].Equals(0x78) && BufferConnect[1].Equals(0x78)) || (BufferConnect[0].Equals(0x79) && BufferConnect[1].Equals(0x79)))// trame GT06N GT800 WeTrack
+
+                    // Concox
+                    else 
+                    
+                    if ((BufferConnect[0].Equals(0x78) && BufferConnect[1].Equals(0x78)) || (BufferConnect[0].Equals(0x79) && BufferConnect[1].Equals(0x79)))// trame GT06N GT800 WeTrack
                     {
                         if (boitier == null)
                         {
@@ -188,7 +191,8 @@ namespace BaliseListner.ThreadListener
 
                         Socket.BeginReceive(BufferIn, 0, BufferIn.Length, SocketFlags.None, new AsyncCallback(ReceiveCallback), this);
                     }
-                    //GT800 Crypté
+
+                    #region GT800 Crypté
                     //else if ((BufferConnect[0].Equals(0x80) && BufferConnect[1].Equals(0x80)))
                     //{
                     //    try
@@ -286,7 +290,9 @@ namespace BaliseListner.ThreadListener
 
 
                     //}
-                    // Teltonika 
+                    #endregion
+
+                    #region  Teltonika
                     //else if ((BufferConnect[0].Equals(0x00) && BufferConnect[1].Equals(0x0F)) || (BufferConnect[0].Equals(0x00) && BufferConnect[1].Equals(0x00)))
                     //{
                     //    if (boitier == null)
@@ -321,16 +327,13 @@ namespace BaliseListner.ThreadListener
                     //    Socket.BeginReceive(BufferIn, 0, BufferIn.Length, SocketFlags.None, new AsyncCallback(ReceiveCallback), this);
 
                     //}
-                    else// Trame atrack without login, Trame VGO 
+                    #endregion
+
+                    // Trame Atrack without login Or VGO 
+                    else
                     {
 
                         string text = Encoding.ASCII.GetString(BufferIn, 0, bytesRead);
-                        //string textDecoder = "";
-
-                        //Console.WriteLine("la connexion: {0},Réception  de : {1}.", Socket.Handle.ToString(), text);
-                        //  Logging(text);
-
-
                         if (boitier == null)
                         {
                             LoggingCommunication("Connection", $"TC\t{RemoteHote}\t{BitConverter.ToString(BufferConnect.ToList().GetRange(0, bytesRead).ToArray()).Replace("-", "")}");//Try to connected
@@ -348,9 +351,7 @@ namespace BaliseListner.ThreadListener
 
                             if (bytesRead > 12 && text.StartsWith("@"))
                             {
-                                //  ModelGeneratorProcessor.addTrame(new Trame(boitier,text));
-
-                                /// <Code pour tester crystage de données: boitier atrack>
+                                #region    Atrack crypté
                                 ///if (boitier.Nisbalise == "359316071459900")
                                 ///{
                                 ///    int DataEcryptedPos = getDataEcryptedPos(BufferConnect, 0);
@@ -361,9 +362,9 @@ namespace BaliseListner.ThreadListener
                                 ///    }
                                 ///}
                                 ///else
-                                /// </Code pour tester crystage de données: boitier atrack>
+                                #endregion     
+                               
                                 currentDate = Collect.splitTrame(new Trame(boitier, text, receptionTime), Socket, currentDate, ref trameReal);
-
                             }
                             if (trameReal != null)
                                 OLDModelGeneratorProcessor.addTrameReal(trameReal);
@@ -371,11 +372,9 @@ namespace BaliseListner.ThreadListener
                         }
                         else
                         {
-
                             if (text.Trim().Length > 0)
-                                //  ModelGeneratorProcessor.addTrame(new Trame(boitier,text));
 
-                                /// <Code pour tester crystage de données: boitier atrack>
+                                #region    Atrack crypté
                                 ///if (boitier.Nisbalise == "359316071459900")
                                 ///{
                                 ///    int DataEcryptedPos = getDataEcryptedPos(BufferConnect, 0);
@@ -385,15 +384,17 @@ namespace BaliseListner.ThreadListener
                                 ///        currentDate = Collect.splitTrame(new Trame(boitier, textDecoder, receptionTime), Socket, currentDate, ref trameReal);
                                 ///    }
                                 ///}
-                                ///else   
-                                /// </Code pour tester crystage de données: boitier atrack>
+                                ///else                              
+                                #endregion
 
                                 currentDate = Collect.splitTrame(new Trame(boitier, text, receptionTime), Socket, currentDate, ref trameReal);
                             if (trameReal != null)
                                 OLDModelGeneratorProcessor.addTrameReal(trameReal);
-
                         }
-                        /// <Code pour tester crystage de données: boitier atrack>
+
+                        #region    Atrack crypté
+                    
+           
                         /// if (boitier.Nisbalise == "359316071459900") 
                         /// { 
                         ///    Logging("Crypté   : " + text, boitier.Nisbalise); 
@@ -401,7 +402,8 @@ namespace BaliseListner.ThreadListener
                         ///         Logging("Décrypté : " + textDecoder, boitier.Nisbalise);    
                         /// }
                         /// else
-                        /// </Code pour tester crystage de données: boitier atrack>
+               
+    #endregion
 
                         Logging($"{text}", boitier.Nisbalise);
                         Socket.Send(Encoding.ASCII.GetBytes(OK), OK.Length, SocketFlags.None);
@@ -413,24 +415,24 @@ namespace BaliseListner.ThreadListener
             catch (BaliseIdentificationException bIdenExcp)
             {
                 Logging("Fermeture de la connexion , impossible d'identifier le boitie ,cause : " + bIdenExcp.Message);
-                LoggingCommunication("Connection", $"bIdenExcp\t{RemoteHote}.\r\n{bIdenExcp.Message}");
+                LoggingCommunication("Connection", $"bIdenExcp\t{RemoteHote}.\t{bIdenExcp.Message}");
                 CloseConnection();
             }
             catch (SocketException e)
             {
-                LoggingCommunication("Connection", $"SE\t{RemoteHote}.\r\n{e.Message}");
+                LoggingCommunication("Connection", $"SE\t{RemoteHote}.\t{e}");
                 CloseConnection();
             }
             catch (Exception e)
             {
                 if (!ConexionClosed)
-                    LoggingCommunication("Connection", $"E\t{RemoteHote}.\r\n{e.Message}");
+                    LoggingCommunication("Connection", $"E\t{RemoteHote}.\t{e}");
                 CloseConnection();
             }
 
             LastTimeReception = DateTime.Now;
         }
-
+        #region    Atrack crypté     
         static int getDataEcryptedPos(byte[] data, int startInddex)
         {
 
@@ -448,8 +450,7 @@ namespace BaliseListner.ThreadListener
             else
                 return -1;
         }
-
-
+        #endregion
         private byte[] getBufferToSend(byte[] BufferConnect)
         {
             byte[] BufferToSend = new byte[10];
@@ -475,7 +476,6 @@ namespace BaliseListner.ThreadListener
             return BufferToSend;
 
         }
-
         public void CloseConnection()
         {
             if (this.tcpClient == null || ConexionClosed)
@@ -531,7 +531,6 @@ namespace BaliseListner.ThreadListener
         //////////    }
 
         //////////}
-
         public bool IsConnected()
         {
             try
@@ -552,7 +551,6 @@ namespace BaliseListner.ThreadListener
             }
 
         }
-
         private int getMatriculeBoitie(String trame, out String trameConnect)
         {
             int matricule = 0;
@@ -696,8 +694,6 @@ namespace BaliseListner.ThreadListener
 
             }
         }
-
-
         [MethodImpl(MethodImplOptions.Synchronized)]
         private static void LoggingCommunication(String erreur, String message)
         {
@@ -720,7 +716,6 @@ namespace BaliseListner.ThreadListener
 
             }
         }
-
         internal string getRemoteConnection()
         {
             if (this.Socket != null)
@@ -738,7 +733,6 @@ namespace BaliseListner.ThreadListener
             else
                 return "hôte non identifie";
         }
-
         override public string ToString()
         {
             if (boitier != null)

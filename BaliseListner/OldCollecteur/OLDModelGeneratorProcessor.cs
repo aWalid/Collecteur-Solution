@@ -271,7 +271,6 @@ namespace OldCollecteur
             }
         }
 
-
         private static void consommeCapteurs()
         {
             while (nbrcapteurAdded > 0 || WaitHandle.WaitAny(trameCapteursConsomeSyncEvents.EventArray) != 1)
@@ -398,7 +397,6 @@ namespace OldCollecteur
 
             }
         }
-
 
         public static void addTramesCapteursNotInserted(List<TrameReal> listTrames)
         {
@@ -647,8 +645,6 @@ namespace OldCollecteur
             }
 
         }
-
-
         public static void addNonInsetedTrameSonde(List<TrameSonde> listTrames)
         {
             if (listTrames == null || listTrames.Count == 0)
@@ -671,7 +667,6 @@ namespace OldCollecteur
             addStatBalise(new BaliseStat(trame.balise, true, System.DateTime.Now));
 
         }
-
         public static void addDeconnect(Balise boitier)
         {
    addStatBalise(new BaliseStat(boitier, false, System.DateTime.Now));
@@ -709,9 +704,6 @@ namespace OldCollecteur
 
             }
         }
-
-
-
         private static void ConsommeTrameSonde()
         {
             while (nbrTrameSondeAdded > 0 || WaitHandle.WaitAny(trameSondeConsomeSyncEvents.EventArray) != 1)
@@ -827,10 +819,7 @@ namespace OldCollecteur
             }
         }
 
-
-
-
-        private static void addStatBalise(BaliseStat stat)
+       private static void addStatBalise(BaliseStat stat)
         {
             lock (((ICollection)statBalise).SyncRoot)
             {
@@ -913,8 +902,6 @@ namespace OldCollecteur
 
             }
         }
-
-
         public static void addSarensTrame(TrameReal trame)
         {
             if (trame == null)
@@ -928,7 +915,6 @@ namespace OldCollecteur
             }
 
         }
-
         public static void addNonInsetedTrameReal(List<TrameReal> listTrames)
         {
             if (listTrames == null || listTrames.Count == 0)
@@ -949,9 +935,5 @@ namespace OldCollecteur
 
             }
         }
-
-
-
-
     }
 }

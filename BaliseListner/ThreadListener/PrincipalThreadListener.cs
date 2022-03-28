@@ -402,7 +402,7 @@ namespace BaliseListner.ThreadListener
 
                     NbrCxnActive = connections.Count;
                 }
-                Console.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Le processus de garbage des connections est terminé, nbr de connections supprimées: {0}, nbr de conections activees: {1}.", NbrCxnDeleted, NbrCxnActive);
+                Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " Le processus de garbage des connections est terminé, nbr de connections supprimées: {0}, nbr de conections activees: {1}.", NbrCxnDeleted, NbrCxnActive);
                 Logging("ConnectionsGarbage", string.Format("Le nbr de connections supprimées: {0}, nbr de conections activees: {1}.", NbrCxnDeleted, NbrCxnActive));
             }
         }

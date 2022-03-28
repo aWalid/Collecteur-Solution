@@ -88,7 +88,7 @@ namespace BaliseListner.ThreadDBAccess
 
                        foreach (string key in listOfKeys)
                            ThreadDictionary.Remove(key);
-                       Console.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]") + " Nettoyage des threads, nbe de threads nettoyés {0}, nbr de threads Actives {1}.", listOfKeys.Count, ThreadDictionary.Count);
+                       Console.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " Nettoyage des threads, nbe de threads nettoyés {0}, nbr de threads Actives {1}.", listOfKeys.Count, ThreadDictionary.Count);
                        Logging("ThreadTrameRealGarbage", string.Format("Nettoyage des threads, nbe de threads nettoyés {0}, nbr de threads Actives {1}.", listOfKeys.Count, ThreadDictionary.Count));
                 }
             }

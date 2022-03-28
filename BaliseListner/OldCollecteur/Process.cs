@@ -319,8 +319,34 @@ namespace OldCollecteur
             DateTime receptionDateTime = tramee.ReceptionDateTime;
             char[] Trameseparator = { '\n', '\r' };
             string[] trame = null;
-            //Logging(trames, boitier.Nisbalise);
-            if (trames.ToUpper().Contains("$GT"))
+
+            //          Concox 
+            if (trames.StartsWith("7878") || trames.StartsWith("7979"))
+            {
+                Byte[] sendBuffer;
+
+                //trames = trames.Replace("7878", ",");
+                //String[] listTrame = trames.Split(",".ToCharArray(), System.StringSplitOptions.RemoveEmptyEntries);
+
+
+                String[] listTrame = getConcoxTrames7878(trames);//only data,check time keep alive, login trames
+
+                foreach (String oneTrame in listTrame)
+                {
+                    sendBuffer = spliteTrameConcox(oneTrame, boitier, ref tramereal, receptionDateTime);
+                    //string typeTrame = oneTrame.Substring(2, 2);
+                    string typeTrame = oneTrame.Substring(6, 2);
+
+                    if (typeTrame.Equals("01", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("13", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("23", StringComparison.OrdinalIgnoreCase)
+                        || typeTrame.Equals("26", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("8A", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("16", StringComparison.OrdinalIgnoreCase))
+                    {
+                        socket.Send(sendBuffer, sendBuffer.Length, SocketFlags.None);
+                        Connection.Logging("Envoie   : " + BitConverter.ToString(sendBuffer).Replace("-", ""), boitier.Nisbalise);
+                    }
+                }
+            }
+
+            else if (trames.ToUpper().Contains("$GT"))
             {
                 if (!String.IsNullOrEmpty(boitier.Nisbalise))
                 {
@@ -356,6 +382,7 @@ namespace OldCollecteur
                     }
                 }
             }
+
             else if (trames.ToUpper().Contains("$GK"))
             {
                 if (!String.IsNullOrEmpty(boitier.Nisbalise))
@@ -398,6 +425,7 @@ namespace OldCollecteur
                     socket.Send(Encoding.ASCII.GetBytes(NO), NO.Length, SocketFlags.None);
                 }
             }
+
             else if (trames.ToUpper().Contains("$GM"))
             {
 
@@ -441,6 +469,7 @@ namespace OldCollecteur
                     LogDBError("Boitier non identifié : trames recus " + trames, boitier.Nisbalise);
                 }
             }
+
             else if (trames.StartsWith("$GPRMC"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -518,6 +547,7 @@ namespace OldCollecteur
                     }
                 }
             }
+
             else if (trames.StartsWith("$I2S"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -549,7 +579,8 @@ namespace OldCollecteur
                     }
                 }
             }
-            // Atrack  Sarens
+
+            //      Atrack  Sarens
             else if (trames.Contains("@S,"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -585,7 +616,8 @@ namespace OldCollecteur
 
                 }
             }
-            // Atrack Ulterson
+
+            //      Atrack Ulterson
             else if (trames.Contains("@U,"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -623,7 +655,8 @@ namespace OldCollecteur
 
                 }
             }
-            // Atrack 
+
+            //          Atrack 
             else if (trames.Contains("@P,"))
             {
 
@@ -662,7 +695,8 @@ namespace OldCollecteur
 
                 }
             }
-            // Atrack avec canbus et trialer (BL, Condor)
+
+            //          Atrack avec canbus et trialer (BL, Condor)
             else if (trames.Contains("@F,"))
             {
                 const string pattern = @"[^(\u0000-\u0009)\u001A(\u0020-\u007F)]+";
@@ -701,7 +735,8 @@ namespace OldCollecteur
 
                 }
             }
-            // Atrack Etusa
+
+            //          Atrack Etusa
             else if (trames.Contains("@E,"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -739,7 +774,8 @@ namespace OldCollecteur
 
                 }
             }
-            //TODO: Balise AX9
+
+            //          TODO: Balise AX9
             else if (trames.Contains("@X,"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -778,7 +814,8 @@ namespace OldCollecteur
 
                 }
             }
-            // Sonde de température "chambre de froid" example de client numilog, la vergule de temperateur est important
+
+            //          Sonde de température "chambre de froid" example de client numilog, la vergule de temperateur est important
             else if (trames.Contains("@T,"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -816,7 +853,8 @@ namespace OldCollecteur
 
                 }
             }
-            // Sonde niveuacarburant
+
+            //          Sonde niveuacarburant
             else if (trames.Contains("@L,"))
             {
                 String[] listTrame = trames.Split(Trameseparator, System.StringSplitOptions.RemoveEmptyEntries);
@@ -855,31 +893,8 @@ namespace OldCollecteur
 
                 }
             }
-            //Concox 
-            else if (trames.StartsWith("7878") || trames.StartsWith("7979"))
-            {
-                Byte[] sendBuffer;
-
-                //trames = trames.Replace("7878", ",");
-                //String[] listTrame = trames.Split(",".ToCharArray(), System.StringSplitOptions.RemoveEmptyEntries);
 
 
-                String[] listTrame = getConcoxTrames7878(trames);//only data,check time keep alive, login trames
-
-                foreach (String oneTrame in listTrame)
-                {
-                    sendBuffer = spliteTrameConcox(oneTrame, boitier, ref tramereal, receptionDateTime);
-                    //string typeTrame = oneTrame.Substring(2, 2);
-                    string typeTrame = oneTrame.Substring(6, 2);
-
-                    if (typeTrame.Equals("01", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("13", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("23", StringComparison.OrdinalIgnoreCase)
-                        || typeTrame.Equals("26", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("8A", StringComparison.OrdinalIgnoreCase) || typeTrame.Equals("16", StringComparison.OrdinalIgnoreCase))
-                    {
-                        socket.Send(sendBuffer, sendBuffer.Length, SocketFlags.None);
-                        Connection.Logging("Envoie   : " + BitConverter.ToString(sendBuffer).Replace("-", ""), boitier.Nisbalise);
-                    }
-                }
-            }
             //          Concox avec Cryptage
             else if (trames.StartsWith("8080"))
             {
@@ -908,7 +923,8 @@ namespace OldCollecteur
                 }
 
             }
-            //          Concox trame 7979 
+
+            //          Concox trame 7979  information
             ///<Commented by ali, 7979  >
             ///else if (trames.StartsWith("7979"))
             ///{
@@ -954,6 +970,7 @@ namespace OldCollecteur
             ///    }
             ///} 
             ///</Commented by ali le >
+
             //          Teltonika
             else if (trames.StartsWith("00000000"))
             {
@@ -989,6 +1006,7 @@ namespace OldCollecteur
                 }
 
             }
+
             // if (!trames.Contains("$"))
             else
             {
@@ -1246,10 +1264,7 @@ namespace OldCollecteur
                             if (tramereal == null || tramereal.Temps < tr.Temps)
                             {
                                 OLDModelGeneratorProcessor.addTrame(tr);
-
                                 tramereal = tr;
-
-
 
                             }
                     }
