@@ -83,6 +83,7 @@ namespace BaliseListner.ThreadListener
         {
             if (!PrincipalListner.baseActive)
                 WaitHandle.SignalAndWait(PrincipalListner.SyncBase.BaseEchecThreadEvent, PrincipalListner.SyncBase.NewItemEvent);
+            LastTimeReception = DateTime.Now;
             DateTime receptionTime = DateTime.Now;
             String textt = "";
             try
@@ -430,7 +431,7 @@ namespace BaliseListner.ThreadListener
                 CloseConnection();
             }
 
-            LastTimeReception = DateTime.Now;
+            
         }
         #region    Atrack crypté     
         static int getDataEcryptedPos(byte[] data, int startInddex)
